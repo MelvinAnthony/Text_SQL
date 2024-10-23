@@ -2,7 +2,7 @@ input_queries = []
 output_queries = []
 
 with open(
-    "/Users/karankinariwala/Library/CloudStorage/OneDrive-Personal/Medeva LLM Internship/data/data.txt",
+    "/Users/melvin/data/data.txt",
     "r",
 ) as f:
     text = f.read()
