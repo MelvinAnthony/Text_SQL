@@ -393,14 +393,14 @@ if __name__ == "__main__":
     embed_model = "text-embedding-3-small"
     model = "claude-3-haiku-20240307"
     # model = "gpt-4-0125-preview"
-    db_path = "/Users/karankinariwala/Library/CloudStorage/OneDrive-Personal/Medeva LLM Internship/src/patient_health_data.db"
+    db_path = "/Users/melvin/src/patient_health_data.db"
     with open(
-        "/Users/karankinariwala/Library/CloudStorage/OneDrive-Personal/Medeva LLM Internship/data/context_claude.txt"
+        "/Users/melvin/data/context_claude.txt"
     ) as f:
         context_prompt = f.read()
 
     with open(
-        "/Users/karankinariwala/Library/CloudStorage/OneDrive-Personal/Medeva LLM Internship/data/schemas_1.txt",
+        "/Users/melvin/data/schemas_1.txt",
         "r",
     ) as f:
         schemas = f.read()
