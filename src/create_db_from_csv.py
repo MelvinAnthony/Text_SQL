@@ -36,7 +36,7 @@ def create_db_from_csv(path_to_csv_dir, db_filename, db_type="sqlite"):
 
 
 if __name__ == "__main__":
-    path_to_csv_dir = "/Users/karankinariwala/OneDrive/Medeva LLM Internship/data/synthea_sample_data_csv_apr2020/csv"
+    path_to_csv_dir = "/Users/melvin/data/synthea_sample_data_csv_apr2020/csv"
     db_filename = "patient_health_data.db"
 
     create_db_from_csv(path_to_csv_dir, db_filename)
