@@ -8,18 +8,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 def create_db_from_csv(path_to_csv_dir, db_filename, db_type="sqlite"):
-    """
-    Creates a database from CSV files in a specified directory.
-    Currently supports SQLite; designed to be extendable for other database types.
-
-    Parameters:
-    ----
-    path_to_csv_dir (str): The directory containing CSV files.
-    db_filename (str): The filename for the created database.
-    db_type (str): Type of SQL database. Currently, only "sqlite" is supported.
-    """
-
-    if db_type.lower() != "sqlite":
+        if db_type.lower() != "sqlite":
         raise ValueError(f"Database type {db_type} is not supported yet.")
 
     csv_files = glob.glob(os.path.join(path_to_csv_dir, "*.csv"))
