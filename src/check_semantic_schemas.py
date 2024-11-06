@@ -5,21 +5,7 @@ import pandas as pd
 def write_user_query_and_semantic_schema_to_file(
     user_query: str, vector_store: str, embed_model: str, top_k: int = 5
 ) -> pd.DataFrame:
-    """
-    Queries a vector database for semantic schemas related to the user's query,
-    and compiles the results into a DataFrame.
-
-    Parameters:
-    ----
-    user_query (str): The query string provided by the user.
-    vector_store (str): Specified the vector databse service to use for the query. Currently, this function only supports "pinecone" and "weaviate".
-    embed_model (str): The model identifier for the OpenAI API to be used for generating embeddings from the text data.
-    top_k (int, optional): The number of top similar items to retrieve. It defaults to 5.
-
-    Returns:
-    ----
-    pd.DataFrame: A DataFrame containing the user query, related titles, similarity scores, and semantic schemas.
-    """
+    
     items = []
     nodes = query_database(user_query, vector_store, embed_model, top_k=top_k)
     for node in nodes:
@@ -42,14 +28,7 @@ def compile_queries_to_csv(
     embed_model: str,
     top_k: int,
 ):
-    """
-    Compiles multiple user queries into a single CSV file containing semantic schemas and other relevant data.
-
-    Parameters:
-    ----------
-    user_queries (list[str]): List of user queries to process.
-    output_file_path (str, optional): The path to save the output CSV file.
-    """
+    
     dfs = [
         write_user_query_and_semantic_schema_to_file(
             query, vector_store, embed_model, top_k
