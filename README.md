@@ -1,94 +1,47 @@
-# 🏏 Cricket Analytics Query System
+# 🏏 RAG-Based Intelligent Cricket Analytics System
 
-An intelligent query system for cricket analytics that allows users to ask natural language questions and get precise SQL query results from a **PostgreSQL** database. The system uses **Pinecone** for semantic search, **OpenAI embeddings** for vector representation, and **LLMs (GPT-4, Claude, Ollama)** for SQL query generation.
+This repository implements a Retrieval-Augmented Generation (RAG) powered system that allows users to query cricket analytics data in natural language and automatically generate SQL queries for PostgreSQL. The system integrates Pinecone, PostgreSQL, OpenAI embeddings, and LLMs (OpenAI, Claude, Ollama) to provide intelligent data retrieval, execution, and visualization.
 
 ---
 
 ## 📌 Features
-- Store cricket analytics data in **PostgreSQL**.
-- Use **OpenAI embeddings** to convert queries into vector representations.
-- Perform **semantic search in Pinecone** for context retrieval.
-- Generate and optimize SQL queries using **LLMs (OpenAI, Claude, Ollama)**.
-- Execute queries directly on PostgreSQL and return results instantly.
-- Modular structure with data preprocessing, embedding generation, and query execution.
+- **RAG Framework**: Combines vector similarity search with LLMs for context-aware SQL query generation.
+- **Cricket Data Analysis**: Stores structured cricket match data in PostgreSQL for advanced analytics.
+- **OpenAI Embeddings**: Converts queries and cricket records into embeddings for semantic similarity.
+- **Vector Search with Pinecone**: Retrieves relevant cricket records efficiently using KNN with cosine similarity.
+- **Multi-LLM SQL Generation**: Uses OpenAI, Claude, and Ollama to generate and compare SQL queries.
+- **Query Validation & Optimization**: Ensures generated SQL is syntactically correct before execution.
+- **Streamlit Interface**: Provides a user-friendly dashboard for query input and result visualization.
+
+---
+<img width="1534" height="791" alt="image" src="https://github.com/user-attachments/assets/33d79f1f-3741-435c-a49b-751e2651c7d8" />
+
+
+## ⚙️ System Workflow
+
+<img width="787" height="788" alt="image" src="https://github.com/user-attachments/assets/99929c99-7e6d-4d9d-b859-4789f211e862" />
 
 ---
 
 ## 🛠️ Tech Stack
-- **Programming Language**: Python
 - **Database**: PostgreSQL
 - **Vector Database**: Pinecone
-- **LLMs**: OpenAI (GPT), Claude, Ollama
-- **Frameworks/Tools**: Streamlit (UI), dotenv (env management), SQLAlchemy (DB connection)
+- **Embeddings**: OpenAI
+- **LLMs**: OpenAI, Claude, Ollama
+- **Frontend**: Streamlit
+- **Language**: Python
 
----
-
-## ⚙️ Installation
-
-1. **Clone the repository**
-```bash
- git clone https://github.com/your-repo/cricket-analytics-query-system.git
- cd cricket-analytics-query-system
-```
-
-2. **Create and activate virtual environment**
-```bash
-python -m venv venv
-source venv/bin/activate   # Linux/Mac
-venv\Scripts\activate      # Windows
-```
-
-3. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-4. **Setup environment variables**
-Create a `.env` file in the project root:
-```env
-OPENAI_API_KEY=your_openai_api_key
-PINECONE_API_KEY=your_pinecone_api_key
-PINECONE_ENV=your_pinecone_env
-DB_USER=your_postgres_user
-DB_PASSWORD=your_postgres_password
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=cricketdb
-```
-
----
-
-## 🚀 Usage
-
-### 1. Run the Streamlit UI
-```bash
-streamlit run app.py
-```
-
-### 2. Enter a Natural Language Query
-Example:
-```
-What is the total runs scored by Virat Kohli in match 12, first innings?
-```
-
-### 3. System Flow
-- Query → Clean & Embed → Pinecone Semantic Search → Context Retrieval → LLM SQL Generation → Query Execution → PostgreSQL Results
-
-### 4. Output
-- Result is displayed in a **table format** directly from PostgreSQL.
-
----
 
 ## 📂 Project Structure
 ```
-├── app.py                 # Streamlit app
-├── db_utils.py            # PostgreSQL connection & execution
-├── rag_pipeline.py        # RAG pipeline with Pinecone + LLM
-├── embeddings.py          # OpenAI embedding functions
-├── query_validator.py     # SQL query validation & optimization
+├── data/                  # Cricket dataset
+├── utils/                 # Utility functions.
+├── embeddings/            # Embedding generation & storage
+├── query/                 # SQL generation & validation
+├── app.py                 # Streamlit interface
 ├── requirements.txt       # Dependencies
 ├── README.md              # Documentation
-└── .env                   # API keys & DB configs
+└── .env                   # API keys and DB configs
 ```
 
 ---
