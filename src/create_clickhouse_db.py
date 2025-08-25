@@ -1,30 +1,68 @@
 import clickhouse_connect
 import os
-import glob
 import pandas as pd
 
-path_to_data_csv = "/Users/karankinariwala/OneDrive/Medeva LLM Internship/data/synthea_sample_data_csv_apr2020/csv"
+# Path to your cricket dataset (CSV)
+path_to_cricket_csv = "data/cricket_data.csv"
 
+# Connect to ClickHouse
 client = clickhouse_connect.get_client()
 
-create_allergies_table = "CREATE TABLE allergies (start Date, stop Nullable(Date), patient String, encounter String, code String, description String) ENGINE MergeTree ORDER BY (patient, code)"
-create_careplans_table = "CREATE TABLE careplans (id String, start Date, stop Date, patient String, encounter String, code String, description String, reasoncode Float32, reasondescription String) ENGINE MergeTree ORDER BY (id)"
+# Create cricket table
+create_cricket_table = """
+CREATE TABLE IF NOT EXISTS cricket_data (
+    match_id UInt32,
+    inning UInt8,
+    batting_team String,
+    bowling_team String,
+    over UInt8,
+    ball UInt8,
+    batsman String,
+    non_striker String,
+    bowler String,
+    is_super_over UInt8,
+    wide_runs UInt8,
+    bye_runs UInt8,
+    legbye_runs UInt8,
+    noball_runs UInt8,
+    penalty_runs UInt8,
+    batsman_runs UInt8,
+    extra_runs UInt8,
+    total_runs UInt8,
+    player_dismissed Nullable(String),
+    dismissal_kind Nullable(String),
+    fielder Nullable(String)
+) ENGINE = MergeTree()
+ORDER BY (match_id, inning, over, ball)
+"""
 
-client.command(create_allergies_table)
-client.command(create_careplans_table)
+# Execute table creation
+client.command(create_cricket_table)
 
-df = pd.read_csv(os.path.join(path_to_data_csv, "allergies.csv"))
-client.command("INSERT INTO allergies VALUES", df.to_dict("records"))
-# client.insert_df(
-#     "allergies",
-#     df,
-#     column_names=["start", "stop", "patient", "encounter", "code", "description"],
-# )
+# Load CSV using pandas
+df = pd.read_csv(path_to_cricket_csv)
 
+# Insert into ClickHouse
+client.insert_df(
+    "cricket_data",
+    df,
+    column_names=[
+        "match_id", "inning", "batting_team", "bowling_team", "over", "ball",
+        "batsman", "non_striker", "bowler", "is_super_over", "wide_runs", 
+        "bye_runs", "legbye_runs", "noball_runs", "penalty_runs", 
+        "batsman_runs", "extra_runs", "total_runs", 
+        "player_dismissed", "dismissal_kind", "fielder"
+    ]
+)
+
+# Verify tables
 result = client.query("SHOW TABLES")
+print("Tables in DB:")
 for table in result.result_rows:
     print(table)
 
-result = client.query("SELECT * FROM allergies LIMIT 5;")
-for table in result.result_rows:
-    print(table)
+# Sample query: first 5 rows
+result = client.query("SELECT * FROM cricket_data LIMIT 5;")
+print("Sample rows:")
+for row in result.result_rows:
+    print(row)
