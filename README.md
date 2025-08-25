@@ -47,11 +47,28 @@ This repository implements a Retrieval-Augmented Generation (RAG) powered system
 ---
 
 ## 📊 Example Query Flow
-- **Input**: "Show me top 5 highest scorers in IPL 2020."
+- **Input**: "What is the total runs scored by Virat Kohli in match 12, first innings?."
 - **Semantic Search**: Pinecone retrieves relevant cricket match records.
-- **LLM Output**: Generates SQL query → `SELECT player, SUM(runs) FROM matches WHERE season=2020 GROUP BY player ORDER BY SUM(runs) DESC LIMIT 5;`
+- **LLM Output**: Generates SQL query → `SELECT 
+    dp.player_name,
+    di.match_id,
+    SUM(fd.batsman_runs) AS total_runs
+FROM fact_deliveries fd
+JOIN dim_inning di ON fd.inning_id = di.inning_id
+JOIN dim_player dp ON fd.batsman_id = dp.player_id
+WHERE dp.player_name = 'Virat Kohli'
+  AND di.match_id = 12
+  AND di.inning_number = 1
+GROUP BY dp.player_name, di.match_id;`
 - **Execution**: PostgreSQL returns the results.
 - **UI**: Streamlit displays the result table.
+
+  <img width="819" height="723" alt="image" src="https://github.com/user-attachments/assets/f01e3292-abf4-407d-a3c2-632405c1d9d0" />
+
+  <img width="830" height="498" alt="image" src="https://github.com/user-attachments/assets/58c2ab87-370e-4550-9a57-16282470c0f1" />
+
+  
+
 
 ---
 
