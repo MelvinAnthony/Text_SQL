@@ -1,5 +1,5 @@
 import streamlit as st
-import sqlite3
+import psycopg2
 import pandas as pd
 import os
 import re
@@ -8,58 +8,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-VECTOR_STORE = os.environ.get("VECTOR_STORE")
-EMBED_MODEL = os.environ.get("EMBED_MODEL")
-GPT_MODEL = os.environ.get("GPT_MODEL")
+VECTOR_STORE = os.environ.get("VECTOR_STORE")  # pinecone
+EMBED_MODEL = os.environ.get("EMBED_MODEL")    # text-embedding-3-small
+GPT_MODEL = os.environ.get("GPT_MODEL")        # gpt-4o-mini
 METRIC_FILENAME = os.environ.get("METRIC_FILENAME")
 CONTEXT_PROMPT_FILE_PATH = os.environ.get("CONTEXT_PROMPT_FILE_PATH")
 
 
-def get_column_names_from_db(db_path: str, sql_query: str) -> list[str]:
-    """
-    Retrieves the column names from a SQL query execution result.
-
-    This function connects to a SQLite database, executes a provided SQL query,
-    and extracts the column names from the query result.
-
-    Parameters:
-    ----
-    - db_path (str): The file path to the SQLite database.
-    - sql_query (str): The SQL query to execute for which the column names are needed.
-
-    Returns:
-    ----
-    - list[str]: A list of column names (str) from the SQL query result.
-    """
+# ---------- DATABASE HELPERS ----------
+def get_column_names_from_db(conn_params: dict, sql_query: str) -> list[str]:
+    """Retrieve column names from a PostgreSQL query result."""
     cols = []
-    with sqlite3.connect(db_path) as connection:
-        cursor = connection.cursor()
-        data = cursor.execute(sql_query)
-        n_cols = len(data.description)
-        for i in range(n_cols):
-            cols.append(data.description[i][0])
-
+    with psycopg2.connect(**conn_params) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql_query)
+            cols = [desc[0] for desc in cur.description]
     return cols
 
 
-def execute_sql_on_db(db_path: str, query: str, params=None) -> pd.DataFrame:
-    """
-    Executes SQL query on specified SQLite3 database with parameters and returns data in a pandas DataFrame.
-
-    Parameters:
-    ----
-    - db_path (str): The file path to the SQLite database.
-    - query (str): The SQL query to execute.
-    - params (dict, optional): Parameters to bind to the query.
-
-    Returns:
-    ----
-    - pandas.DataFrame: The result of the SQL query as a DataFrame.
-    """
-    with sqlite3.connect(db_path) as connection:
-        return pd.read_sql_query(query, connection, params)
+def execute_sql_on_db(conn_params: dict, query: str, params=None) -> pd.DataFrame:
+    """Executes SQL query on PostgreSQL and returns result as pandas DataFrame."""
+    with psycopg2.connect(**conn_params) as conn:
+        return pd.read_sql_query(query, conn, params=params)
 
 
+# ---------- STREAMLIT HELPERS ----------
 def display_schemas(schemas):
     st.markdown("## Semantically Similar Schemas")
     for schema in schemas:
@@ -114,6 +87,7 @@ def read_metric_file():
         return data
 
 
+# ---------- APP START ----------
 try:
     with open(CONTEXT_PROMPT_FILE_PATH) as f:
         default_context_prompt = f.read()
@@ -124,10 +98,25 @@ increment_visitor_count()
 visitor_count = get_visitor_count()
 st.sidebar.write(f"Visitor Count: {visitor_count}")
 
+# DB connection info (user input instead of hardcoded .db file)
+st.sidebar.header("Database Connection")
+db_host = st.sidebar.text_input("Host", value="localhost")
+db_port = st.sidebar.text_input("Port", value="5432")
+db_user = st.sidebar.text_input("User", value="postgres")
+db_password = st.sidebar.text_input("Password", type="password")
+db_name = st.sidebar.text_input("Database", value="cricketdb")
+
+conn_params = {
+    "host": db_host,
+    "port": db_port,
+    "user": db_user,
+    "password": db_password,
+    "dbname": db_name,
+}
+
 user_prompt = st.text_input("User Prompt:", key="user_prompt")
 st.write(f"Your prompt is: {user_prompt}")
 user_has_interacted = True
-
 
 ask_for_context_prompt = st.radio(
     "Do you want to enter a context prompt?",
@@ -149,20 +138,21 @@ if view_context:
 
 if user_prompt and user_has_interacted:
     with st.spinner("Processing..."):
-
         try:
             from src.query_llm import LLMQueryHandler
 
             handler = LLMQueryHandler(
                 model=GPT_MODEL,
-                vector_store=VECTOR_STORE,
+                vector_store=VECTOR_STORE,   # Pinecone
                 embed_model=EMBED_MODEL,
                 top_k=3,
             )
 
+            # get schemas semantically similar to user query
             schemas = handler.get_semantic_schemas(user_prompt)
             display_schemas(schemas)
 
+            # generate SQL query
             output = handler.generate_sql_query(
                 schemas,
                 user_prompt,
@@ -172,6 +162,7 @@ if user_prompt and user_has_interacted:
             st.write("SQL Query:")
             st.code(sql_query, language="sql")
 
+            # cost calc
             cost = handler.calculate_query_execution_cost(
                 GPT_MODEL, output["N_PROMPT_TOKENS"], output["N_GENERATED_TOKENS"]
             )
@@ -181,7 +172,8 @@ if user_prompt and user_has_interacted:
             st.write(f"Query Cost: ${cost}")
             st.write(f"Total Cost: ${total_cost}")
 
-            df = execute_sql_on_db("patient_health_data.db", sql_query)
+            # execute query on PostgreSQL instead of SQLite
+            df = execute_sql_on_db(conn_params, sql_query)
             st.dataframe(df)
 
             if st.button("Reset"):
