@@ -1,101 +1,67 @@
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.vector_stores.weaviate import WeaviateVectorStore
 from llama_index.core import VectorStoreIndex
 from llama_index.embeddings.openai import OpenAIEmbedding
 from pinecone import Pinecone
-import weaviate
 from dotenv import load_dotenv
 import os
+import logging
+
+
+def setup_logger(name: str):
+    """Helper logger setup"""
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logger.addHandler(handler)
+    return logger
+
 
 def query_database(
     query: str,
-    vector_store: str,
     embed_model: str,
     embed_batch_size: int = 10,
-    index_name: str = None,
+    index_name: str = "cricket-index",
     top_k: int = 5,
 ):
     """
-    Queries the vector database for items that are similar to a given query. This function
-    supports querying from different vector stores, specificallyyy "pinecone" and "weaviate",
-    to find the top similar items based on the similarity of their vector representations
-    to the vector representation of the input query.
+    Queries the Pinecone vector database for items that are similar to a given query.
 
     Parameters:
     ----
     - query (str): The query string to search for.
-    - vector_store (str): Specified the vector databse service to use for the query.
-    Currently, this function only supports "pinecone" and "weaviate".
-    - embed_model (str): The model identifier for the OpenAI API to be used for generating
-    embeddings from the text data.
-    - embed_batch_size (int): The number of documents to process in each batch when generating embeddings.
-    - index_name (str, optional): The name of the index within the specified vector store
-    to query against. If not provided, a default index name will be used based on the
-    vector store ("schema-index for Pinecone and "SchemaIndex" for Weaviate).
-    - top_k (int, optional): The number of top similar items to retrieve. It defaults to 5.
+    - embed_model (str): OpenAI embedding model name (e.g. "text-embedding-3-small").
+    - embed_batch_size (int, optional): The number of docs to process per batch. Default=10.
+    - index_name (str, optional): The Pinecone index to query. Default="cricket-index".
+    - top_k (int, optional): Number of top similar items to retrieve. Default=5.
 
     Returns:
     ----
-    - A list of nodes representing the top k similar items. Each node in the list corresponds
-    to an item in the vector databse.
-
-    Raises:
-    ----
-    - 'ValueError': If the 'vector_store' specified is not supported (i.e. not "pinecone"
-    or "weaviate"), a 'ValueError' will be raised indicating the unsupported vector store.
-    - 'ValueError': If the required API keys for the specified vector store are not provided
-    or are invalid, a 'ValueError' will be raised.
-
-    Example Usage:
-    ----
-    # Query the database for items similar to "machine learning"
-    similar_items = query_database(
-        query="machine learning",
-        vector_store="pinecone",
-        index_name="my-index",
-        top_k=10
-    )
-    for node in nodes:
-        print(f"Items: {node.get_text()}")
+    - A list of nodes representing the top k similar items.
     """
 
     load_dotenv()
 
-    if vector_store not in ["pinecone", "weaviate"]:
-        raise ValueError(
-            f"{vector_store} is not supported. Currently supported: 'pinecone' or 'weaviate'"
-        )
+    pinecone_api_key = os.getenv("PINECONE_API_KEY")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
 
-    if vector_store == "pinecone":
-        pinecone_api_key = os.environ.get("PINECONE_API_KEY")
-        if pinecone_api_key is None:
-            raise ValueError(
-                "PINECONE_API_KEY must be specified as an environment variable."
-            )
-        if index_name is None:
-            index_name = "schema-index"
+    if not pinecone_api_key:
+        raise ValueError("PINECONE_API_KEY must be specified in .env file.")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY must be specified in .env file.")
 
-        pc = Pinecone(api_key=pinecone_api_key)
-        pc_index = pc.Index(name=index_name)
-        vector_store = PineconeVectorStore(
-            pinecone_index=pc_index, api_key=pinecone_api_key
-        )
+    # Connect to Pinecone
+    pc = Pinecone(api_key=pinecone_api_key)
 
-    elif vector_store == "weaviate":
+    if index_name not in pc.list_indexes().names():
+        raise ValueError(f"Index '{index_name}' does not exist in Pinecone.")
 
-        if index_name is None:
-            index_name = "SchemaIndex"
+    pc_index = pc.Index(name=index_name)
 
-        WEAVIATE_HOST = os.environ.get("WEAVIATE_HOST")
-        client = weaviate.Client(url=WEAVIATE_HOST)
-        vector_store = WeaviateVectorStore(
-            weaviate_client=client, index_name=index_name
-        )
+    # Wrap Pinecone index
+    vector_store = PineconeVectorStore(pinecone_index=pc_index, api_key=pinecone_api_key)
 
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
-    if openai_api_key is None:
-        raise ValueError("OPENAI_API_KEY must be specified as an environment variable.")
-
+    # Setup retriever
     retriever = VectorStoreIndex.from_vector_store(
         vector_store=vector_store,
         embed_model=OpenAIEmbedding(
@@ -109,18 +75,22 @@ def query_database(
 
 
 if __name__ == "__main__":
-    from utils import setup_logger
-
     logger = setup_logger(__name__)
-    query = "How does the prevalence of specific conditions (e.g., hypertension, diabetes) vary across different age groups and ethnicities within our patient population?"
+    query = "Who scored the most runs in match 12 of IPL 2024?"
 
     try:
-        nodes = query_database(query, "weaviate", "text-embedding-3-small")
-    except Exception as e:
-        logger.error(f"Failed to query vector database: {e}")
+        nodes = query_database(
+            query=query,
+            embed_model="text-embedding-3-small",
+            index_name="cricket-index",
+            top_k=5,
+        )
+        for node in nodes:
+            title = node.metadata.get("title", "Unknown Table")
+            print(f"Table: {title}")
+            print(f"Similarity Score: {node.get_score()}")
+            print(f"Data: {node.get_text()}")
+            print("-" * 40)
 
-    for node in nodes:
-        title = node.metadata["title"]
-        print(f"Table: {title}")
-        print(f"Similarity Score: {node.get_score()}")
-        print(f"Schems: {node.get_text()}")
+    except Exception as e:
+        logger.error(f"Failed to query Pinecone: {e}")
